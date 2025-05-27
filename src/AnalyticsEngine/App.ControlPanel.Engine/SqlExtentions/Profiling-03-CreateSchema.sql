@@ -1,5 +1,3 @@
-/* tsqllint-disable warning set-transaction-isolation-level */
-
 SET ANSI_NULLS ON;
 GO
 
@@ -283,35 +281,6 @@ BEGIN
 END
 GO
 
--- =============================================
--- Aggregates all possible weekly analytics data
--- =============================================
-
-IF OBJECT_ID(N'profiling.usp_Trace') IS NOT NULL
-BEGIN
-  DROP PROCEDURE profiling.usp_Trace;
-END
-GO
-
-CREATE PROCEDURE profiling.usp_Trace
-(
-  @Message NVARCHAR(500),
-  @p1 NVARCHAR(50) = NULL,
-  @p2 NVARCHAR(50) = NULL,
-  @p3 NVARCHAR(50) = NULL,
-  @p4 NVARCHAR(50) = NULL,
-  @p5 NVARCHAR(50) = NULL
-)
-AS
-BEGIN
-  DECLARE @FormattedMessage NVARCHAR(MAX);
-  SELECT @FormattedMessage = FORMATMESSAGE(@Message, CAST(@p1 AS NVARCHAR(50)), CAST(@p2 AS NVARCHAR(50)), CAST(@p3 AS NVARCHAR(50)), CAST(@p4 AS NVARCHAR(50)), CAST(@p5 AS NVARCHAR(50)));
-
-  INSERT INTO profiling.TraceLogs ("Datetime", Message)
-  SELECT GETDATE(), @FormattedMessage;
-END;
-GO
-
 -- ======================================================
 -- Weekly aggregated activity data per user. Data in rows
 -- ======================================================
@@ -332,7 +301,7 @@ BEGIN
         -- ,OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF
       )
   );
-END;
+END
 GO
 
 IF NOT EXISTS (
@@ -734,12 +703,11 @@ BEGIN
     @ThisDayWasMonday INT;
 
   -- Set the first day of the week to Monday
-  SELECT
-    @ThisDayWasMonday = DATEPART(WEEKDAY, '20230102'),
-    @Result = @CurrentDate;
+  SET @ThisDayWasMonday = DATEPART(WEEKDAY, '20230102');
+  SET @Result = @CurrentDate;
   WHILE @ThisDayWasMonday <> DATEPART(WEEKDAY, @Result)
   BEGIN
-    SELECT @Result = CONVERT(DATE, DATEADD(DAY, -1, @Result));
+    SET @Result = CONVERT(DATE, DATEADD(DAY, -1, @Result));
   END
   RETURN @Result;
 END;
@@ -1119,7 +1087,6 @@ BEGIN
   WHERE @StartDate <= "date" AND "date" <= @EndDate
   GROUP BY "user_id";
 
-  /* tsqllint-disable warning update-where */
   UPDATE t WITH (UPDLOCK, SERIALIZABLE)
   SET
     "Teams Private Chats" = tvp.private_chat_count,
@@ -1143,7 +1110,6 @@ BEGIN
   FROM #ActivitiesStaging AS t
     INNER JOIN @teams AS tvp
       ON t."user_id" = tvp."user_id" AND t."date" = tvp."date";
-  /* tsqllint-enable warning update-where */
 
   INSERT #ActivitiesStaging
   (
@@ -1227,7 +1193,6 @@ BEGIN
   WHERE @StartDate <= "date" AND "date" <= @EndDate
   GROUP BY "user_id";
 
-  /* tsqllint-disable warning update-where */
   UPDATE t WITH (UPDLOCK, SERIALIZABLE)
   SET
     "OneDrive Viewed/Edited" = tvp.viewed_or_edited,
@@ -1237,7 +1202,6 @@ BEGIN
   FROM #ActivitiesStaging AS t
     INNER JOIN @onedrive AS tvp
       ON t."user_id" = tvp."user_id" AND t."date" = tvp."date";
-  /* tsqllint-enable warning update-where */
 
   INSERT #ActivitiesStaging
   (
@@ -1293,7 +1257,6 @@ BEGIN
   WHERE @StartDate <= "date" AND "date" <= @EndDate
   GROUP BY "user_id";
 
-  /* tsqllint-disable warning update-where */
   UPDATE t WITH (UPDLOCK, SERIALIZABLE)
   SET
     "SPO Viewed/Edited" = tvp.viewed_or_edited,
@@ -1303,7 +1266,6 @@ BEGIN
   FROM #ActivitiesStaging AS t
     INNER JOIN @sharepoint AS tvp
       ON t."user_id" = tvp."user_id" AND t."date" = tvp."date";
-  /* tsqllint-enable warning update-where */
 
   INSERT #ActivitiesStaging
   (
@@ -1361,7 +1323,6 @@ BEGIN
   WHERE @StartDate <= "date" AND "date" <= @EndDate
   GROUP BY "user_id";
 
-  /* tsqllint-disable warning update-where */
   UPDATE t WITH (UPDLOCK, SERIALIZABLE)
   SET
     "Emails Sent" = tvp.email_send_count,
@@ -1372,7 +1333,6 @@ BEGIN
   FROM #ActivitiesStaging AS t
     INNER JOIN @outlook AS tvp
       ON t."user_id" = tvp."user_id" AND t."date" = tvp."date";
-  /* tsqllint-enable warning update-where */
 
   INSERT #ActivitiesStaging
   (
@@ -1428,7 +1388,6 @@ BEGIN
   WHERE @StartDate <= "date" AND "date" <= @EndDate
   GROUP BY "user_id";
 
-  /* tsqllint-disable warning update-where */
   UPDATE t WITH (UPDLOCK, SERIALIZABLE)
   SET
     "Yammer Posted" = tvp.posted_count,
@@ -1437,7 +1396,6 @@ BEGIN
   FROM #ActivitiesStaging AS t
     INNER JOIN @yammer AS tvp
       ON t."user_id" = tvp."user_id" AND t."date" = tvp."date";
-  /* tsqllint-enable warning update-where */
 
   INSERT #ActivitiesStaging
   (
@@ -1505,7 +1463,6 @@ BEGIN
   WHERE @StartDate <= "date" AND "date" <= @EndDate
   GROUP BY "user_id";
 
-  /* tsqllint-disable warning update-where */
   UPDATE t WITH (UPDLOCK, SERIALIZABLE)
   SET
     "Teams Used Web" = staging.used_web,
@@ -1520,8 +1477,6 @@ BEGIN
   FROM #UsageStaging AS t
     INNER JOIN @ut_staging AS staging
       ON t."user_id" = staging."user_id" AND t."date" = staging."date";
-  /* tsqllint-enable warning update-where */
-
   INSERT #UsageStaging
   (
     "user_id",
@@ -1646,7 +1601,6 @@ BEGIN
   WHERE @StartDate <= "date" AND "date" <= @EndDate
   GROUP BY "user_id";
 
-  /* tsqllint-disable warning update-where */
   UPDATE t WITH (UPDLOCK, SERIALIZABLE)
   SET
     "Office Windows" = staging.windows,
@@ -1686,7 +1640,6 @@ BEGIN
   FROM #UsageStaging AS t
     INNER JOIN @ut_staging AS staging ON t."user_id" = staging."user_id"
       AND t."date" = staging."date";
-  /* tsqllint-enable warning update-where */
 
   INSERT #UsageStaging
   (
@@ -1811,7 +1764,6 @@ BEGIN
   WHERE @StartDate <= "date" AND "date" <= @EndDate
   GROUP BY "user_id";
 
-  /* tsqllint-disable warning update-where */
   UPDATE t WITH (UPDLOCK, SERIALIZABLE)
   SET
     "Yammer Platform Count" = staging.used_count,
@@ -1825,7 +1777,6 @@ BEGIN
   FROM #UsageStaging AS t
     INNER JOIN @ut_staging AS staging
       ON t."user_id" = staging."user_id" AND t."date" = staging."date";
-  /* tsqllint-enable warning update-where */
 
   INSERT #UsageStaging
   (
@@ -2049,7 +2000,6 @@ BEGIN
     JOIN event_counts AS c ON a."user_id" = c."user_id"
   GROUP BY a."user_id";
 
-  /* tsqllint-disable warning update-where */
   UPDATE t WITH (UPDLOCK, SERIALIZABLE)
   SET
     "Copilot Chats" = tvp.copilot_chats,
@@ -2079,7 +2029,6 @@ BEGIN
   FROM #ActivitiesStaging AS t
     INNER JOIN @copilot AS tvp
       ON t."user_id" = tvp."user_id" AND t."date" = tvp."date";
-  /* tsqllint-enable warning update-where */
 
   INSERT #ActivitiesStaging
   (
@@ -2152,7 +2101,7 @@ GO
 
 IF OBJECT_ID(N'profiling.usp_CompileWeekActivityRows') IS NOT NULL
 BEGIN
-  DROP PROCEDURE profiling.usp_CompileWeekActivityRows;
+DROP PROCEDURE profiling.usp_CompileWeekActivityRows;
 END
 GO
 
@@ -2165,7 +2114,10 @@ AS
 BEGIN
   SET NOCOUNT ON;
   BEGIN TRY
-    EXEC profiling.usp_Trace '[usp_CompileWeekActivityRows] Starting: %s', @Monday;
+    INSERT INTO profiling.TraceLogs ("Datetime", Message)
+    SELECT
+      GETDATE(),
+      N'[usp_CompileWeekActivityRows] Starting: ' + CAST(@Monday AS NVARCHAR(50));
 
     INSERT INTO profiling.ActivitiesWeekly
     SELECT
@@ -2240,9 +2192,8 @@ BEGIN
     GROUP BY "user_id", Metric;
   END TRY
   BEGIN CATCH
-    DECLARE @ErrorMessage NVARCHAR(4000);
-    SELECT @ErrorMessage = ERROR_MESSAGE();
-    EXEC profiling.usp_Trace '[usp_CompileWeekActivityRows] Catch: %s', @ErrorMessage;
+    INSERT INTO profiling.TraceLogs ("Datetime", Message)
+    SELECT GETDATE(), N'[usp_CompileWeekActivityRows] Catch: ' + ERROR_MESSAGE();
   END CATCH;
 END;
 GO
@@ -2266,7 +2217,10 @@ AS
 BEGIN
   SET NOCOUNT ON;
   BEGIN TRY
-    EXEC profiling.usp_Trace '[usp_CompileWeekActivityColumns] Starting: %s', @Monday;
+    INSERT INTO profiling.TraceLogs ("Datetime", Message)
+    SELECT
+      GETDATE(),
+      N'[usp_CompileWeekActivityColumns] Starting: ' + CAST(@Monday AS NVARCHAR(50));
 
     INSERT INTO profiling.ActivitiesWeeklyColumns
     (
@@ -2395,9 +2349,8 @@ BEGIN
     FROM #ActivitiesStaging;
   END TRY
   BEGIN CATCH
-    DECLARE @ErrorMessage NVARCHAR(4000);
-    SELECT @ErrorMessage = ERROR_MESSAGE();
-    EXEC profiling.usp_Trace '[usp_CompileWeekActivityColumns] Catch: %s', @ErrorMessage;
+    INSERT INTO profiling.TraceLogs ("Datetime", Message)
+    SELECT GETDATE(), N'[usp_CompileWeekActivityColumns] Catch: ' + ERROR_MESSAGE();
   END CATCH;
 END;
 GO
@@ -2421,7 +2374,10 @@ AS
 BEGIN
   SET NOCOUNT ON;
   BEGIN TRY
-    EXEC profiling.usp_Trace '[usp_CompileUsageWeek] Starting: %s', @Monday;
+    INSERT INTO profiling.TraceLogs ("Datetime", Message)
+    SELECT
+      GETDATE(),
+      N'[usp_CompileUsageWeek] Starting: ' + CAST(@Monday AS NVARCHAR(50));
 
     DECLARE
       @Sunday DATE = DATEADD(DAY, 6, @Monday),
@@ -2611,9 +2567,10 @@ BEGIN
     END
   END TRY
   BEGIN CATCH
-    DECLARE @ErrorMessage NVARCHAR(4000);
-    SELECT @ErrorMessage = ERROR_MESSAGE();
-    EXEC profiling.usp_Trace 'Catch [usp_CompileUsageWeek]: %s', @ErrorMessage;
+    INSERT INTO profiling.TraceLogs ("Datetime", Message)
+    SELECT
+      GETDATE(),
+      N'Catch [usp_CompileUsageWeek]: ' + ERROR_MESSAGE();
     IF OBJECT_ID('tempdb..#UsageStaging') IS NOT NULL
     BEGIN
       DROP TABLE #UsageStaging;
@@ -2641,7 +2598,10 @@ AS
 BEGIN
   SET NOCOUNT ON;
   BEGIN TRY
-    EXEC profiling.usp_Trace '[usp_CompileActivityWeek] Starting: %s', @Monday;
+    INSERT INTO profiling.TraceLogs ("Datetime", Message)
+    SELECT
+      GETDATE(),
+      N'[usp_CompileActivityWeek] Starting: ' + CAST(@Monday AS NVARCHAR(50));
 
     DECLARE
       @Sunday DATE = DATEADD(DAY, 6, @Monday),
@@ -2745,14 +2705,80 @@ BEGIN
     END
   END TRY
   BEGIN CATCH
-    DECLARE @ErrorMessage NVARCHAR(4000);
-    SELECT @ErrorMessage = ERROR_MESSAGE();
-    EXEC profiling.usp_Trace '[usp_CompileActivityWeek] Catch: %s', @ErrorMessage;
+    INSERT INTO profiling.TraceLogs ("Datetime", Message)
+    SELECT
+      GETDATE(),
+      N'[usp_CompileActivityWeek] Catch: ' + ERROR_MESSAGE();
     IF OBJECT_ID('tempdb..#ActivitiesStaging') IS NOT NULL
     BEGIN
       DROP TABLE #ActivitiesStaging;
     END
   END CATCH;
+END;
+GO
+
+-- ============================================================
+-- Find the min and max date from the activity and usage tables
+-- ============================================================
+
+IF OBJECT_ID(N'profiling.usp_FindDates') IS NOT NULL
+BEGIN
+  DROP PROCEDURE profiling.usp_FindDates;
+END
+GO
+
+CREATE PROCEDURE profiling.usp_FindDates
+(
+  @activity DATE OUTPUT,
+  @weekly DATE OUTPUT
+)
+AS
+BEGIN
+  /*
+  We need to understand if we can do a weekly aggregation.
+  This function will return two dates:
+  - From the raw activity and usage tables, find the earliest last date from all the
+  tables. On that day, we know that all tables will have data and we won't miss anything.
+  - From the aggregated tables, find the same date. The three tables should have the
+  same date, but if one has an earlier date, we give the process a chance and we will
+  retry that missing week again.
+  */
+
+  -- Dates in the raw activity/usage tables
+  WITH
+    dates AS (
+      SELECT MAX(time_stamp) AS activity_max FROM dbo.audit_events
+      UNION
+      SELECT MAX("date") FROM dbo.onedrive_user_activity_log
+      UNION
+      SELECT MAX("date") FROM dbo.outlook_user_activity_log
+      UNION
+      SELECT MAX("date") FROM dbo.platform_user_activity_log
+      UNION
+      SELECT MAX("date") FROM dbo.sharepoint_user_activity_log
+      UNION
+      SELECT MAX("date") FROM dbo.teams_user_activity_log
+      UNION
+      SELECT MAX("date") FROM dbo.teams_user_device_usage_log
+      UNION
+      SELECT MAX("date") FROM dbo.yammer_user_activity_log
+      UNION
+      SELECT MAX("date") FROM dbo.yammer_device_activity_log
+    )
+  SELECT @activity = MIN(activity_max)
+  FROM dates;
+
+  -- Dates in the aggregated weekly tables
+  WITH
+    dates AS (
+      SELECT MAX(MetricDate) AS "date" FROM profiling.ActivitiesWeekly
+      UNION
+      SELECT MAX("date") FROM profiling.ActivitiesWeeklyColumns
+      UNION
+      SELECT MAX("date") FROM profiling.UsageWeekly
+    )
+  SELECT @weekly = MIN("date")
+  FROM dates;
 END;
 GO
 
@@ -2774,46 +2800,57 @@ CREATE PROCEDURE profiling.usp_CompileWeekly
 AS
 BEGIN
   SET NOCOUNT ON;
-  -- Today is the first day that there should be data, which usually is Today-4 days
-  DECLARE @Today DATE = DATEADD(DAY, -4, GETDATE());
-  -- Day when aggregation should stop
+  DECLARE @Today DATE = DATEADD(DAY, 0, GETDATE());
+  -- Day when the weekly aggregation should stop
+  -- Should be this week's Monday
   DECLARE @ThisWeeksMonday DATE = profiling.udf_GetMonday (@Today);
+  -- Force an aggregation on Thursday
+  DECLARE @ForceAggregationDate DATE = DATEADD(DAY, 3, @ThisWeeksMonday);
   -- When data aggregation starts
+  -- The very first Monday for the whole period we want to keep in the database
+  -- Everything before this day should be deleted
   DECLARE @RetentionDate DATE = DATEADD(WEEK, -1 * @WeeksToKeep, @ThisWeeksMonday);
-  -- Get last aggregated date in the table, it will be a Monday
-  DECLARE @LastDateInTables DATE;
+  DECLARE
+    -- Last aggregated date in the table, it will be a Monday
+    @LastAggregatedDate DATE,
+    -- Last date on the raw tables for which we are certain all tables have data
+    @LastAvailableDateForAggregation DATE;
+  
+  EXEC profiling.usp_FindDates
+    @activity = @LastAvailableDateForAggregation OUTPUT,
+    @weekly = @LastAggregatedDate OUTPUT;
 
-  -- Dates in the aggregated weekly tables
-  WITH
-    dates AS (
-      SELECT MAX(MetricDate) AS "date" FROM profiling.ActivitiesWeekly
-      UNION
-      SELECT MAX("date") FROM profiling.ActivitiesWeeklyColumns
-      UNION
-      SELECT MAX("date") FROM profiling.UsageWeekly
-    )
-  SELECT @LastDateInTables = MIN("date")
-  FROM dates;
-
-  IF @LastDateInTables IS NULL OR @All = 1
+  IF @ForceAggregationDate > @Today
+    AND @LastAvailableDateForAggregation < @ThisWeeksMonday
   BEGIN
+    -- The raw tables are not yet updated enough to compile a week.
+    RETURN;
+  END
+
+  IF @LastAggregatedDate IS NULL OR @All = 1
+  BEGIN
+    -- Tables empty or full aggregation
     -- Start from the retention date
-    SELECT @LastDateInTables = @RetentionDate;
+    SELECT @LastAggregatedDate = @RetentionDate;
   END
 
   -- Week by week, aggregate the data
-  DECLARE @Monday DATE = DATEADD(DAY, 7, @LastDateInTables);
+  DECLARE @Monday DATE = DATEADD(DAY, 7, @LastAggregatedDate);
 
-  EXEC profiling.usp_Trace
-    N'Weekly aggregation requested. First: %s. Last: %s',
-    @Monday,
-    @ThisWeeksMonday;
+  INSERT INTO profiling.TraceLogs ("Datetime", Message)
+  SELECT
+    GETDATE(),
+    N'Weekly aggregation requested, from ' + CAST(@Monday AS NVARCHAR(50))
+    + ' to possibly ' + CAST(@ThisWeeksMonday AS NVARCHAR(50));
 
   WHILE @ThisWeeksMonday > @Monday
   BEGIN
     DECLARE @Sunday DATE = DATEADD(DAY, 6, @Monday);
 
-    EXEC profiling.usp_Trace 'Week from %s to %s', @Monday, @Sunday;
+    INSERT INTO profiling.TraceLogs ("Datetime", Message)
+    SELECT
+      GETDATE(),
+      N'Week from ' + CAST(@Monday AS NVARCHAR(50)) + ' to ' + CAST(@Sunday AS NVARCHAR(50));
 
     EXECUTE profiling.usp_CompileActivityWeek @Monday;
     EXECUTE profiling.usp_CompileUsageWeek @Monday;
@@ -2822,7 +2859,10 @@ BEGIN
   END
 
   -- Cleanup. Remove data in the tables before the retention date
-  EXEC profiling.usp_Trace 'Starting cleanup. Retention date: %s', @RetentionDate;
+  INSERT INTO profiling.TraceLogs ("Datetime", Message)
+  SELECT
+    GETDATE(),
+    N'Starting cleanup. Retention date: ' + CAST(@RetentionDate AS NVARCHAR(50));
 
   DELETE FROM profiling.ActivitiesWeekly
   WHERE MetricDate < @RetentionDate;
@@ -2833,6 +2873,7 @@ BEGIN
   DELETE FROM profiling.UsageWeekly
   WHERE "date" < @RetentionDate;
 
-  EXEC profiling.usp_Trace 'Aggregation finished';
+  INSERT INTO profiling.TraceLogs ("Datetime", Message)
+  SELECT GETDATE(), N'Aggregation finished';
 END;
 GO
